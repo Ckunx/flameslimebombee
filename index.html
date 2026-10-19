@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flame Slime Bomber - Minijuego Arcade</title>
+  <style>
+    :root {
+      --bg-dark: #0a0c10;
+      --panel-bg: #121620;
+      --accent-flame: #ff5722;
+      --accent-gold: #ffb703;
+      --accent-blue: #00b4d8;
+      --text-light: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border-dark: #262f45;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #141926 0%, #07090e 100%);
+      color: var(--text-light);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      padding: 8px;
+    }
+
+    .game-wrapper {
+      position: relative;
+      background: var(--panel-bg);
+      border: 2px solid var(--border-dark);
+      border-radius: 14px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 87, 34, 0.15);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 100%;
+    }
+
+    /* Barra Superior / HUD */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 6px 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 8px;
+      border: 1px solid var(--border-dark);
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .hud-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-stat .icon {
+      font-size: 18px;
+    }
+
+    .hud-val {
+      color: var(--accent-gold);
+    }
+
+    .hud-lives {
+      color: #ff4757;
+      letter-spacing: 2px;
+    }
+
+    /* Contenedor del Canvas */
+    .canvas-container {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8);
+      border: 2px solid #20293d;
+      background: #0f141d;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    /* Superposiciones de Pantalla (Inicio, Pausa, Fin) */
+    .overlay-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 10, 16, 0.88);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 10;
+      transition: opacity 0.2s ease;
+    }
+
+    .overlay-screen.hidden {
+      display: none;
+    }
+
+    .game-title {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ff9e00 0%, #ff5400 50%, #ff0054 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+      text-shadow: 0 4px 12px rgba(255, 84, 0, 0.4);
+    }
+
+    .game-subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+      max-width: 320px;
+      line-height: 1.4;
+    }
+
+    .story-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #ff6b35 0%, #d83110 100%);
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(230, 57, 24, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(230, 57, 24, 0.6);
+      filter: brightness(1.1);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .controls-hint {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .key-badge {
+      display: inline-block;
+      background: #1e2638;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    /* Controles Táctiles para Móviles / Tablets */
+    .touch-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-top: 12px;
+      padding: 4px 8px;
+      max-width: 520px;
+    }
+
+    .d-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(3, 46px);
+      gap: 4px;
+    }
+
+    .t-btn {
+      background: #182030;
+      border: 1px solid #2a3752;
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+      transition: background 0.1s;
+    }
+
+    .t-btn:active {
+      background: #ff5722;
+      border-color: #ff8a65;
+      transform: scale(0.94);
+    }
+
+    .t-up { grid-column: 2; grid-row: 1; }
+    .t-left { grid-column: 1; grid-row: 2; }
+    .t-down { grid-column: 2; grid-row: 3; }
+    .t-right { grid-column: 3; grid-row: 2; }
+
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-bomb {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ff7043, #c62828);
+      border: 3px solid #ffab91;
+      color: white;
+      font-size: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(198, 40, 40, 0.6);
+      transition: transform 0.1s;
+    }
+
+    .btn-bomb span {
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: -2px;
+    }
+
+    .btn-bomb:active {
+      transform: scale(0.92);
+      filter: brightness(1.2);
+    }
+
+    .btn-small-toggle {
+      background: #182030;
+      border: 1px solid #2a3752;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-small-toggle:hover {
+      color: white;
+    }
+
+    /* Modal de victoria / derrota */
+    .result-score {
+      font-size: 22px;
+      color: var(--accent-gold);
+      font-weight: bold;
+      font-family: monospace;
+      margin: 12px 0 20px;
+    }
+  </style>
+<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+<body>
+
+  <div class="game-wrapper">
+    <!-- Marcador / HUD Superior -->
+    <div class="hud">
+      <div class="hud-stat">
+        <span class="icon">❤️</span>
+        <span id="hud-lives" class="hud-lives">♥♥♥</span>
+      </div>
+      <div class="hud-stat">
+        <span class="icon">⭐</span>
+        <span id="hud-score" class="hud-val">0000</span>
+      </div>
+      <div class="hud-stat">
+        <span class="icon">💣</span>
+        <span id="hud-bombs" class="hud-val">1/1</span>
+      </div>
+      <div class="hud-stat">
+        <span class="icon">🔥</span>
+        <span id="hud-range" class="hud-val">x1</span>
+      </div>
+      <div class="hud-stat">
+        <span class="icon">👾</span>
+        <span id="hud-slimes" class="hud-val">0</span>
+      </div>
+    </div>
+
+    <!-- Contenedor del Lienzo y Overlays -->
+    <div class="canvas-container" id="canvas-container">
+      <canvas id="gameCanvas" width="560" height="440"></canvas>
+
+      <!-- Pantalla de Inicio -->
+      <div id="screen-start" class="overlay-screen">
+        <div class="game-title">Flame Slime Bomber</div>
+        <p class="game-subtitle">¡Eres el valiente Slime de Fuego! Explota tus bombas mágicas para limpiar los bloques y derrotar a los Slimes Azules invasores.</p>
+        <div class="story-badge">
+          <span>🔥 Flame Slime (Tú)</span>
+          <span>vs</span>
+          <span>💧 Slimes Azules</span>
+        </div>
+        <button id="btn-start" class="btn">
+          <span>▶ INICIAR JUEGO</span>
+        </button>
+        <div class="controls-hint">
+          Usa <span class="key-badge">WASD</span> o <span class="key-badge">Flechas</span> para moverte<br>
+          Presiona <span class="key-badge">Espacio</span> para soltar una bomba
+        </div>
+      </div>
+
+      <!-- Pantalla de Game Over -->
+      <div id="screen-gameover" class="overlay-screen hidden">
+        <div class="game-title" style="background: linear-gradient(135deg, #ff4d4d, #990000); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">¡Game Over!</div>
+        <p class="game-subtitle">Un Slime Azul o tu propia explosión te ha apagado las llamas.</p>
+        <div class="result-score">Puntuación Final: <span id="final-score">0</span></div>
+        <button id="btn-restart" class="btn">
+          <span>🔄 INTENTAR DE NUEVO</span>
+        </button>
+      </div>
+
+      <!-- Pantalla de Victoria -->
+      <div id="screen-victory" class="overlay-screen hidden">
+        <div class="game-title" style="background: linear-gradient(135deg, #ffd166, #06d6a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">¡Victoria Flamígera!</div>
+        <p class="game-subtitle">¡Has purificado el mapa de todos los Slimes Azules!</p>
+        <div class="result-score">Puntuación: <span id="victory-score">0</span></div>
+        <button id="btn-next" class="btn">
+          <span>⚡ SIGUIENTE NIVEL</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Controles Táctiles (para móviles y tablets) -->
+    <div class="touch-controls">
+      <div class="d-pad">
+        <button class="t-btn t-up" id="t-up" aria-label="Arriba">▲</button>
+        <button class="t-btn t-left" id="t-left" aria-label="Izquierda">◀</button>
+        <button class="t-btn t-down" id="t-down" aria-label="Abajo">▼</button>
+        <button class="t-btn t-right" id="t-right" aria-label="Derecha">▶</button>
+      </div>
+
+      <div class="action-group">
+        <button class="btn-bomb" id="t-bomb" aria-label="Soltar Bomba">
+          💣
+          <span>BOMBA</span>
+        </button>
+        <button class="btn-small-toggle" id="btn-mute">🔊 Sonido</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * FLAME SLIME BOMBER - Motor del Juego en JavaScript Puro
+     * - Slime de Fuego (Protagonista procedural)
+     * - Slimes Azules (Enemigos procedurales con IA)
+     * - Sintetizador de audio retro Web Audio API
+     * - Rejilla con colisiones, bombas, propagación de fuego y power-ups
+     */
+
+    // --- SINTETIZADOR DE EFECTOS DE SONIDO (Web Audio API) ---
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playTone(freq, type, duration, startVol = 0.2, endVol = 0.01) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(endVol, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+          // Audio context safe fallback
+        }
+      }
+
+      bombPlant() {
+        if (this.muted) return;
+        this.playTone(320, 'sine', 0.1, 0.2);
+        setTimeout(() => this.playTone(480, 'triangle', 0.12, 0.15), 60);
+      }
+
+      explosion() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          // Ruido blanco simulado para la explosión
+          const bufferSize = this.ctx.sampleRate * 0.4;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.4);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          noise.start();
+        } catch(e) {}
+      }
+
+      powerup() {
+        if (this.muted) return;
+        this.playTone(440, 'sine', 0.08, 0.2);
+        setTimeout(() => this.playTone(660, 'sine', 0.1, 0.2), 80);
+        setTimeout(() => this.playTone(880, 'triangle', 0.15, 0.25), 160);
+      }
+
+      enemyHit() {
+        if (this.muted) return;
+        this.playTone(260, 'square', 0.15, 0.2, 0.01);
+        setTimeout(() => this.playTone(520, 'triangle', 0.2, 0.2, 0.01), 70);
+      }
+
+      playerHurt() {
+        if (this.muted) return;
+        this.playTone(180, 'sawtooth', 0.3, 0.3, 0.01);
+      }
+
+      victory() {
+        if (this.muted) return;
+        const notes = [440, 554, 659, 880];
+        notes.forEach((freq, idx) => {
+          setTimeout(() => this.playTone(freq, 'triangle', 0.25, 0.25), idx * 120);
+        });
+      }
+
+      defeat() {
+        if (this.muted) return;
+        const notes = [300, 260, 220, 180];
+        notes.forEach((freq, idx) => {
+          setTimeout(() => this.playTone(freq, 'sawtooth', 0.25, 0.25), idx * 140);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // --- CONFIGURACIÓN DE LA MATRIZ Y CONSTANTES ---
+    const COLS = 15;
+    const ROWS = 11;
+    const TILE_SIZE = 40; // 15*40 = 600px de ancho aprox, escalado a 560x440
+    const CANVAS_WIDTH = 560;
+    const CANVAS_HEIGHT = 440;
+    const SCALE_X = CANVAS_WIDTH / (COLS * 32);
+    const CELL_SIZE = CANVAS_WIDTH / COLS; // ~37.33px
+
+    // Tipos de celdas
+    const TILE_EMPTY = 0;
+    const TILE_WALL = 1;     // Bloque indestructible
+    const TILE_BLOCK = 2;    // Bloque destructible
+
+    // Tipos de Power-ups
+    const ITEM_NONE = 0;
+    const ITEM_BOMB = 1;   // +1 bomba
+    const ITEM_FIRE = 2;   // +1 radio de fuego
+    const ITEM_SPEED = 3;  // +velocidad
+    const ITEM_HEART = 4;  // +1 vida
+
+    // --- VARIABLES DE ESTADO PRINCIPALES ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gameState = 'START'; // 'START' | 'PLAYING' | 'GAMEOVER' | 'VICTORY'
+    let level = 1;
+    let score = 0;
+    let lives = 3;
+    let grid = [];
+    let itemsGrid = [];
+    let bombs = [];
+    let fireParticles = [];
+    let enemies = [];
+    let particles = [];
+    let animTime = 0;
+    let lastTimestamp = 0;
+
+    // Estado del Jugador (Flame Slime)
+    const player = {
+      x: 1.5, // coordenadas en la cuadrícula (centro de celda)
+      y: 1.5,
+      vx: 0,
+      vy: 0,
+      speed: 3.2,
+      maxBombs: 1,
+      fireRange: 1,
+      invulnerable: 0, // temporizador de invulnerabilidad
+      facing: 'down',
+      isMoving: false,
+      squash: 1
+    };
+
+    // --- ENTRADA DE TECLADO Y BOTONES TÁCTILES ---
+    const keys = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      bomb: false
+    };
+
+    function setupInput() {
+      window.addEventListener('keydown', (e) => {
+        if (['ArrowUp', 'KeyW'].includes(e.code)) { keys.up = true; e.preventDefault(); }
+        if (['ArrowDown', 'KeyS'].includes(e.code)) { keys.down = true; e.preventDefault(); }
+        if (['ArrowLeft', 'KeyA'].includes(e.code)) { keys.left = true; e.preventDefault(); }
+        if (['ArrowRight', 'KeyD'].includes(e.code)) { keys.right = true; e.preventDefault(); }
+        if (['Space', 'Enter'].includes(e.code)) {
+          if (gameState === 'PLAYING') {
+            placeBomb();
+          } else if (gameState === 'START') {
+            startGame();
+          } else if (gameState === 'GAMEOVER') {
+            restartGame();
+          } else if (gameState === 'VICTORY') {
+            nextLevel();
+          }
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (['ArrowUp', 'KeyW'].includes(e.code)) keys.up = false;
+        if (['ArrowDown', 'KeyS'].includes(e.code)) keys.down = false;
+        if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = false;
+        if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = false;
+      });
+
+      // Asistentes para botones táctiles
+      const bindTouch = (id, keyName) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const setKey = (val) => (e) => { e.preventDefault(); sound.init(); keys[keyName] = val; };
+        el.addEventListener('touchstart', setKey(true));
+        el.addEventListener('touchend', setKey(false));
+        el.addEventListener('mousedown', setKey(true));
+        el.addEventListener('mouseup', setKey(false));
+      };
+
+      bindTouch('t-up', 'up');
+      bindTouch('t-down', 'down');
+      bindTouch('t-left', 'left');
+      bindTouch('t-right', 'right');
+
+      const btnBomb = document.getElementById('t-bomb');
+      btnBomb.addEventListener('touchstart', (e) => { e.preventDefault(); sound.init(); placeBomb(); });
+      btnBomb.addEventListener('click', (e) => { sound.init(); placeBomb(); });
+
+      // Botón Silenciar
+      const btnMute = document.getElementById('btn-mute');
+      btnMute.addEventListener('click', () => {
+        sound.muted = !sound.muted;
+        btnMute.textContent = sound.muted ? '🔇 Silenciado' : '🔊 Sonido';
+      });
+
+      // Botones de pantallas
+      document.getElementById('btn-start').addEventListener('click', () => { sound.init(); startGame(); });
+      document.getElementById('btn-restart').addEventListener('click', () => { sound.init(); restartGame(); });
+      document.getElementById('btn-next').addEventListener('click', () => { sound.init(); nextLevel(); });
+    }
+
+    // --- INICIALIZACIÓN DE NIVEL Y MAPA ---
+    function initLevel() {
+      grid = [];
+      itemsGrid = [];
+      bombs = [];
+      fireParticles = [];
+      particles = [];
+
+      for (let r = 0; r < ROWS; r++) {
+        grid[r] = [];
+        itemsGrid[r] = [];
+        for (let c = 0; c < COLS; c++) {
+          itemsGrid[r][c] = ITEM_NONE;
+
+          // Bordes indestructible
+          if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
+            grid[r][c] = TILE_WALL;
+          }
+          // Columnas fijas indestructibles (como en Bomberman original)
+          else if (r % 2 === 0 && c % 2 === 0) {
+            grid[r][c] = TILE_WALL;
+          }
+          // Zona de inicio segura para el jugador (arriba-izquierda)
+          else if ((r <= 2 && c <= 2) && (r === 1 || c === 1)) {
+            grid[r][c] = TILE_EMPTY;
+          }
+          // Resto: probabilidad de bloque destructible
+          else {
+            if (Math.random() < 0.65) {
+              grid[r][c] = TILE_BLOCK;
+              // Probabilidad de esconder un ítem
+              const itemRoll = Math.random();
+              if (itemRoll < 0.12) itemsGrid[r][c] = ITEM_BOMB;
+              else if (itemRoll < 0.24) itemsGrid[r][c] = ITEM_FIRE;
+              else if (itemRoll < 0.32) itemsGrid[r][c] = ITEM_SPEED;
+              else if (itemRoll < 0.38) itemsGrid[r][c] = ITEM_HEART;
+            } else {
+              grid[r][c] = TILE_EMPTY;
+            }
+          }
+        }
+      }
+
+      // Reiniciar posición del jugador
+      player.x = 1.5;
+      player.y = 1.5;
+      player.invulnerable = 1.5; // Escudo temporal al reaparecer
+
+      // Generar Slimes Azules enemigos según el nivel
+      enemies = [];
+      const enemyCount = Math.min(3 + level * 2, 9);
+      for (let i = 0; i < enemyCount; i++) {
+        spawnBlueSlime();
+      }
+
+      updateHUD();
+    }
+
+    function spawnBlueSlime() {
+      // Buscar una celda vacía lejos del jugador
+      for (let tries = 0; tries < 200; tries++) {
+        const c = Math.floor(Math.random() * (COLS - 2)) + 1;
+        const r = Math.floor(Math.random() * (ROWS - 2)) + 1;
+        const dist = Math.hypot(c - player.x, r - player.y);
+        if (grid[r][c] === TILE_EMPTY && dist > 4) {
+          enemies.push({
+            x: c + 0.5,
+            y: r + 0.5,
+            dirX: Math.random() < 0.5 ? 1 : -1,
+            dirY: 0,
+            speed: 1.6 + Math.min(level * 0.2, 1.2),
+            squash: 1,
+            animOffset: Math.random() * 10
+          });
+          break;
+        }
+      }
+    }
+
+    function startGame() {
+      gameState = 'PLAYING';
+      score = 0;
+      lives = 3;
+      level = 1;
+      player.maxBombs = 1;
+      player.fireRange = 1;
+      player.speed = 3.2;
+      document.getElementById('screen-start').classList.add('hidden');
+      document.getElementById('screen-gameover').classList.add('hidden');
+      document.getElementById('screen-victory').classList.add('hidden');
+      initLevel();
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    function nextLevel() {
+      level++;
+      score += 500;
+      gameState = 'PLAYING';
+      document.getElementById('screen-victory').classList.add('hidden');
+      initLevel();
+      sound.powerup();
+    }
+
+    // --- ACCIÓN: COLOCAR BOMBA ---
+    function placeBomb() {
+      if (gameState !== 'PLAYING') return;
+
+      const cellX = Math.floor(player.x);
+      const cellY = Math.floor(player.y);
+
+      // Verificar si ya hay una bomba en esa celda
+      const existing = bombs.find(b => b.cellX === cellX && b.cellY === cellY);
+      if (existing) return;
+
+      // Verificar límite de bombas simultáneas
+      if (bombs.length >= player.maxBombs) return;
+
+      bombs.push({
+        cellX,
+        cellY,
+        timer: 2.5, // 2.5 segundos para detonar
+        range: player.fireRange,
+        scale: 1,
+        fuse: 0
+      });
+
+      sound.bombPlant();
+      updateHUD();
+    }
+
+    // --- DETONACIÓN Y PROPAGACIÓN DE FUEGO ---
+    function detonateBomb(bomb) {
+      sound.explosion();
+
+      // Efecto de temblor en pantalla
+      screenShake = 8;
+
+      const { cellX, cellY, range } = bomb;
+
+      // Crear centro de la explosión
+      createFireCell(cellX, cellY);
+
+      // 4 Direcciones: Arriba, Abajo, Izquierda, Derecha
+      const directions = [
+        { dx: 0, dy: -1 },
+        { dx: 0, dy: 1 },
+        { dx: -1, dy: 0 },
+        { dx: 1, dy: 0 }
+      ];
+
+      for (const dir of directions) {
+        for (let step = 1; step <= range; step++) {
+          const cx = cellX + dir.dx * step;
+          const cy = cellY + dir.dy * step;
+
+          if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) break;
+
+          // Si es muro sólido indestructible, se detiene el rayo
+          if (grid[cy][cx] === TILE_WALL) {
+            break;
+          }
+
+          // Si es bloque destructible, lo explota y detiene el rayo en ese bloque
+          if (grid[cy][cx] === TILE_BLOCK) {
+            grid[cy][cx] = TILE_EMPTY;
+            createBlockDebris(cx, cy);
+            createFireCell(cx, cy);
+            score += 20;
+
+            // Si tenía ítem, se revela
+            if (itemsGrid[cy][cx] !== ITEM_NONE) {
+              spawnItemSparkles(cx, cy);
+            }
+            break;
+          }
+
+          // Celda vacía: el fuego continúa
+          createFireCell(cx, cy);
+
+          // Si hay otra bomba en camino, detonación en cadena inmediata
+          const hitBomb = bombs.find(b => b.cellX === cx && b.cellY === cy && b !== bomb);
+          if (hitBomb) {
+            hitBomb.timer = 0.05; // Detona casi al instante
+          }
+        }
+      }
+
+      updateHUD();
+    }
+
+    function createFireCell(cx, cy) {
+      fireParticles.push({
+        cx,
+        cy,
+        duration: 0.5,
+        maxDuration: 0.5
+      });
+    }
+
+    function createBlockDebris(cx, cy) {
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x: (cx + 0.5) * CELL_SIZE,
+          y: (cy + 0.5) * CELL_SIZE,
+          vx: (Math.random() - 0.5) * 160,
+          vy: (Math.random() - 0.5) * 160 - 50,
+          color: Math.random() < 0.5 ? '#b45309' : '#d97706',
+          size: Math.random() * 4 + 3,
+          alpha: 1,
+          life: 0.4
+        });
+      }
+    }
+
+    function spawnItemSparkles(cx, cy) {
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          x: (cx + 0.5) * CELL_SIZE,
+          y: (cy + 0.5) * CELL_SIZE,
+          vx: (Math.random() - 0.5) * 80,
+          vy: -Math.random() * 80 - 20,
+          color: '#ffd166',
+          size: 3,
+          alpha: 1,
+          life: 0.5
+        });
+      }
+    }
+
+    function spawnSlimeSplatter(x, y) {
+      for (let i = 0; i < 16; i++) {
+        particles.push({
+          x: x * CELL_SIZE,
+          y: y * CELL_SIZE,
+          vx: (Math.random() - 0.5) * 180,
+          vy: (Math.random() - 0.5) * 180,
+          color: Math.random() < 0.5 ? '#00b4d8' : '#90e0ef',
+          size: Math.random() * 5 + 3,
+          alpha: 1,
+          life: 0.6
+        });
+      }
+    }
+
+    // --- ACTUALIZACIÓN DE ESTADO / LÓGICA DE JUEGO (60 FPS) ---
+    let screenShake = 0;
+
+    function update(dt) {
+      animTime += dt;
+      if (screenShake > 0) {
+        screenShake = Math.max(0, screenShake - dt * 25);
+      }
+
+      if (gameState !== 'PLAYING') return;
+
+      // 1. Manejo del Jugador (Flame Slime)
+      let moveX = 0;
+      let moveY = 0;
+      if (keys.left) moveX -= 1;
+      if (keys.right) moveX += 1;
+      if (keys.up) moveY -= 1;
+      if (keys.down) moveY += 1;
+
+      // Normalizar vector diagonal
+      if (moveX !== 0 && moveY !== 0) {
+        moveX *= 0.7071;
+        moveY *= 0.7071;
+      }
+
+      player.isMoving = (moveX !== 0 || moveY !== 0);
+
+      if (moveX < 0) player.facing = 'left';
+      else if (moveX > 0) player.facing = 'right';
+      else if (moveY < 0) player.facing = 'up';
+      else if (moveY > 0) player.facing = 'down';
+
+      // Movimiento con deslizamiento de esquinas y colisiones
+      const pSpeed = player.speed * dt;
+      const radius = 0.38;
+
+      if (moveX !== 0) {
+        const nextX = player.x + moveX * pSpeed;
+        if (!isBlocked(nextX, player.y, radius)) {
+          player.x = nextX;
+        } else {
+          // Asistencia de esquina: alinear al centro de la fila si está cerca
+          const targetY = Math.floor(player.y) + 0.5;
+          const diffY = targetY - player.y;
+          if (Math.abs(diffY) < 0.3) {
+            player.y += Math.sign(diffY) * pSpeed * 0.8;
+          }
+        }
+      }
+
+      if (moveY !== 0) {
+        const nextY = player.y + moveY * pSpeed;
+        if (!isBlocked(player.x, nextY, radius)) {
+          player.y = nextY;
+        } else {
+          // Asistencia de esquina en X
+          const targetX = Math.floor(player.x) + 0.5;
+          const diffX = targetX - player.x;
+          if (Math.abs(diffX) < 0.3) {
+            player.x += Math.sign(diffX) * pSpeed * 0.8;
+          }
+        }
+      }
+
+      // Animación de squash & stretch
+      player.squash = player.isMoving ? 1 + Math.sin(animTime * 15) * 0.12 : 1 + Math.sin(animTime * 4) * 0.05;
+
+      // Invulnerabilidad del jugador
+      if (player.invulnerable > 0) {
+        player.invulnerable = Math.max(0, player.invulnerable - dt);
+      }
+
+      // Recolección de Power-ups
+      const pcx = Math.floor(player.x);
+      const pcy = Math.floor(player.y);
+      if (grid[pcy][pcx] === TILE_EMPTY && itemsGrid[pcy][pcx] !== ITEM_NONE) {
+        applyPowerup(itemsGrid[pcy][pcx]);
+        itemsGrid[pcy][pcx] = ITEM_NONE;
+      }
+
+      // 2. Actualizar Bombas
+      for (let i = bombs.length - 1; i >= 0; i--) {
+        const b = bombs[i];
+        b.timer -= dt;
+        b.fuse += dt * 10;
+        b.scale = 1 + Math.sin(b.timer * 12) * 0.08;
+
+        if (b.timer <= 0) {
+          detonateBomb(b);
+          bombs.splice(i, 1);
+        }
+      }
+
+      // 3. Actualizar Fuego de Explosiones
+      for (let i = fireParticles.length - 1; i >= 0; i--) {
+        const f = fireParticles[i];
+        f.duration -= dt;
+
+        // Comprobar colisión de fuego con el jugador
+        if (player.invulnerable <= 0) {
+          const distToPlayer = Math.hypot(player.x - (f.cx + 0.5), player.y - (f.cy + 0.5));
+          if (distToPlayer < 0.6) {
+            damagePlayer();
+          }
+        }
+
+        // Comprobar colisión de fuego con Slimes Azules
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const en = enemies[j];
+          const dist = Math.hypot(en.x - (f.cx + 0.5), en.y - (f.cy + 0.5));
+          if (dist < 0.65) {
+            spawnSlimeSplatter(en.x, en.y);
+            enemies.splice(j, 1);
+            score += 150;
+            sound.enemyHit();
+            updateHUD();
+
+            // Comprobar si eliminó a todos
+            if (enemies.length === 0) {
+              setTimeout(() => {
+                triggerVictory();
+              }, 400);
+            }
+          }
+        }
+
+        if (f.duration <= 0) {
+          fireParticles.splice(i, 1);
+        }
+      }
+
+      // 4. Actualizar Slimes Azules (Enemigos con IA)
+      for (let i = 0; i < enemies.length; i++) {
+        const en = enemies[i];
+        updateBlueSlime(en, dt);
+
+        // Colisión enemigo con jugador
+        if (player.invulnerable <= 0) {
+          const distToPlayer = Math.hypot(player.x - en.x, player.y - en.y);
+          if (distToPlayer < 0.65) {
+            damagePlayer();
+          }
+        }
+      }
+
+      // 5. Partículas cosméticas
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        p.alpha = Math.max(0, p.life * 2);
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // 6. Textos flotantes (+1 RANGO, +VELOCIDAD, etc.)
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= dt * 35;
+        ft.life -= dt;
+        if (ft.life <= 0) {
+          floatingTexts.splice(i, 1);
+        }
+      }
+    }
+
+    // Comprobación de Colisión en la Cuadrícula
+    function isBlocked(x, y, radius) {
+      const minX = Math.floor(x - radius);
+      const maxX = Math.floor(x + radius);
+      const minY = Math.floor(y - radius);
+      const maxY = Math.floor(y + radius);
+
+      for (let r = minY; r <= maxY; r++) {
+        for (let c = minX; c <= maxX; c++) {
+          if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+          if (grid[r][c] !== TILE_EMPTY) return true;
+
+          // Las bombas bloquean a menos que el jugador aún esté saliendo de su celda
+          const hasBomb = bombs.find(b => b.cellX === c && b.cellY === r);
+          if (hasBomb) {
+            const dist = Math.hypot(x - (c + 0.5), y - (r + 0.5));
+            if (dist > 0.85) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    // IA y Movimiento de los Slimes Azules
+    function updateBlueSlime(en, dt) {
+      en.squash = 1 + Math.sin(animTime * 10 + en.animOffset) * 0.1;
+
+      const step = en.speed * dt;
+      let nextX = en.x + en.dirX * step;
+      let nextY = en.y + en.dirY * step;
+
+      // Colisión simple contra paredes o bombas
+      const hitWall = isBlocked(nextX, nextY, 0.35);
+
+      // En cada cruce de celda, pequeña probabilidad de girar o perseguir
+      const nearCenter = Math.abs((en.x % 1) - 0.5) < 0.08 && Math.abs((en.y % 1) - 0.5) < 0.08;
+
+      if (hitWall || (nearCenter && Math.random() < 0.04)) {
+        // Buscar direcciones libres
+        const dirs = [
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 }
+        ];
+
+        const validDirs = dirs.filter(d => {
+          // No devolverse inmediatamente salvo que no haya otra opción
+          if (d.x === -en.dirX && d.y === -en.dirY && !hitWall) return false;
+          return !isBlocked(Math.floor(en.x) + 0.5 + d.x * 0.6, Math.floor(en.y) + 0.5 + d.y * 0.6, 0.35);
+        });
+
+        if (validDirs.length > 0) {
+          // Si el jugador está alineado en la misma fila o columna sin muros, intentar acercarse
+          const alignedX = Math.abs(player.y - en.y) < 0.4;
+          const alignedY = Math.abs(player.x - en.x) < 0.4;
+
+          let chosenDir = null;
+          if (alignedX && Math.random() < 0.5) {
+            const desiredX = player.x > en.x ? 1 : -1;
+            chosenDir = validDirs.find(d => d.x === desiredX);
+          } else if (alignedY && Math.random() < 0.5) {
+            const desiredY = player.y > en.y ? 1 : -1;
+            chosenDir = validDirs.find(d => d.y === desiredY);
+          }
+
+          if (!chosenDir) {
+            chosenDir = validDirs[Math.floor(Math.random() * validDirs.length)];
+          }
+
+          en.dirX = chosenDir.x;
+          en.dirY = chosenDir.y;
+          // Centrar para evitar atorarse
+          en.x = Math.floor(en.x) + 0.5;
+          en.y = Math.floor(en.y) + 0.5;
+        } else {
+          // Invertir marcha
+          en.dirX = -en.dirX;
+          en.dirY = -en.dirY;
+        }
+      } else {
+        en.x = nextX;
+        en.y = nextY;
+      }
+    }
+
+    // Lista de textos flotantes animados (+1 FUEGO, +VELOCIDAD, etc.)
+    let floatingTexts = [];
+
+    // Efecto de Power-up recogido con texto flotante distintivo y partículas
+    function applyPowerup(type) {
+      sound.powerup();
+      score += 75;
+
+      const px = player.x * CELL_SIZE;
+      const py = player.y * CELL_SIZE;
+
+      if (type === ITEM_BOMB) {
+        player.maxBombs = Math.min(player.maxBombs + 1, 5);
+        floatingTexts.push({ text: '+1 BOMBA! 💣', x: px, y: py - 10, color: '#c084fc', life: 1.0 });
+        spawnBurstParticles(px, py, '#c084fc');
+      } else if (type === ITEM_FIRE) {
+        player.fireRange = Math.min(player.fireRange + 1, 5);
+        floatingTexts.push({ text: '+1 RANGO! 🔥', x: px, y: py - 10, color: '#ff7043', life: 1.0 });
+        spawnBurstParticles(px, py, '#ff5722');
+      } else if (type === ITEM_SPEED) {
+        player.speed = Math.min(player.speed + 0.5, 5.2);
+        floatingTexts.push({ text: '+VELOCIDAD! ⚡', x: px, y: py - 10, color: '#ffd600', life: 1.0 });
+        spawnBurstParticles(px, py, '#ffd600');
+      } else if (type === ITEM_HEART) {
+        lives = Math.min(lives + 1, 5);
+        floatingTexts.push({ text: '+1 VIDA! ❤️', x: px, y: py - 10, color: '#ff4081', life: 1.0 });
+        spawnBurstParticles(px, py, '#ff1744');
+      }
+      updateHUD();
+    }
+
+    function spawnBurstParticles(x, y, color) {
+      for (let i = 0; i < 14; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = Math.random() * 90 + 30;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          color: color,
+          size: Math.random() * 4 + 2,
+          alpha: 1,
+          life: 0.6
+        });
+      }
+    }
+
+    // Daño al Jugador
+    function damagePlayer() {
+      lives--;
+      sound.playerHurt();
+      player.invulnerable = 2.0; // 2 segundos de parpadeo invencible
+      floatingTexts.push({ text: '-1 CORAZÓN 💔', x: player.x * CELL_SIZE, y: player.y * CELL_SIZE - 12, color: '#ff1744', life: 1.0 });
+      screenShake = 12;
+
+      // Expulsar chispas de fuego
+      for (let i = 0; i < 15; i++) {
+        particles.push({
+          x: player.x * CELL_SIZE,
+          y: player.y * CELL_SIZE,
+          vx: (Math.random() - 0.5) * 150,
+          vy: (Math.random() - 0.5) * 150,
+          color: '#ff4500',
+          size: 4,
+          alpha: 1,
+          life: 0.5
+        });
+      }
+
+      updateHUD();
+
+      if (lives <= 0) {
+        triggerGameOver();
+      }
+    }
+
+    function triggerGameOver() {
+      gameState = 'GAMEOVER';
+      sound.defeat();
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('screen-gameover').classList.remove('hidden');
+    }
+
+    function triggerVictory() {
+      gameState = 'VICTORY';
+      sound.victory();
+      document.getElementById('victory-score').textContent = score;
+      document.getElementById('screen-victory').classList.remove('hidden');
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-lives').textContent = '♥'.repeat(Math.max(0, lives));
+      document.getElementById('hud-score').textContent = score.toString().padStart(4, '0');
+      document.getElementById('hud-bombs').textContent = `${bombs.length}/${player.maxBombs}`;
+      document.getElementById('hud-range').textContent = `x${player.fireRange}`;
+      document.getElementById('hud-slimes').textContent = enemies.length;
+    }
+
+    // --- RENDERIZADO VISUAL EN EL CANVAS ---
+    function render() {
+      ctx.save();
+
+      // Aplicar temblor de pantalla si hay explosión
+      if (screenShake > 0) {
+        const shakeX = (Math.random() - 0.5) * screenShake;
+        const shakeY = (Math.random() - 0.5) * screenShake;
+        ctx.translate(shakeX, shakeY);
+      }
+
+      // Fondo base de la mazmorra / piso
+      ctx.fillStyle = '#0b0f17';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // Dibujar baldosas del suelo con textura sutil
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const x = c * CELL_SIZE;
+          const y = r * CELL_SIZE;
+
+          // Cuadrícula ajedrezada sutil de suelo de piedra
+          ctx.fillStyle = (r + c) % 2 === 0 ? '#131926' : '#101521';
+          ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+          // Detalles de las baldosas
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+          ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+        }
+      }
+
+      // Dibujar Power-ups revelados en el suelo
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (grid[r][c] === TILE_EMPTY && itemsGrid[r][c] !== ITEM_NONE) {
+            drawItem(c, r, itemsGrid[r][c]);
+          }
+        }
+      }
+
+      // Dibujar Paredes y Bloques Destructibles
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const x = c * CELL_SIZE;
+          const y = r * CELL_SIZE;
+
+          if (grid[r][c] === TILE_WALL) {
+            drawSolidWall(x, y);
+          } else if (grid[r][c] === TILE_BLOCK) {
+            drawDestructibleBlock(x, y);
+          }
+        }
+      }
+
+      // Dibujar Bombas
+      for (const b of bombs) {
+        drawBomb(b);
+      }
+
+      // Dibujar Fuego de Explosiones
+      for (const f of fireParticles) {
+        drawFireCell(f);
+      }
+
+      // Dibujar Slimes Azules (Enemigos)
+      for (const en of enemies) {
+        drawBlueSlime(en);
+      }
+
+      // Dibujar Flame Slime (Jugador)
+      if (gameState === 'PLAYING' || gameState === 'START' || gameState === 'VICTORY') {
+        drawFlameSlimePlayer();
+      }
+
+      // Dibujar Partículas
+      for (const p of particles) {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Dibujar Textos Flotantes de Power-ups (+1 FUEGO, etc.)
+      for (const ft of floatingTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, ft.life * 1.8);
+        ctx.font = 'bold 13px "Chakra Petch", monospace, sans-serif';
+        ctx.fillStyle = ft.color;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 6;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // Dibujar Muro Indestructible (Piedra oscura con bisel metálico)
+    function drawSolidWall(x, y) {
+      ctx.fillStyle = '#1e2638';
+      ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+      // Bisel superior brillante
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x, y, CELL_SIZE, 3);
+      ctx.fillRect(x, y, 3, CELL_SIZE);
+
+      // Sombra inferior
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(x, y + CELL_SIZE - 3, CELL_SIZE, 3);
+      ctx.fillRect(x + CELL_SIZE - 3, y, 3, CELL_SIZE);
+
+      // Remaches centrales
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(x + 6, y + 6, 3, 3);
+      ctx.fillRect(x + CELL_SIZE - 9, y + 6, 3, 3);
+      ctx.fillRect(x + 6, y + CELL_SIZE - 9, 3, 3);
+      ctx.fillRect(x + CELL_SIZE - 9, y + CELL_SIZE - 9, 3, 3);
+    }
+
+    // Dibujar Bloque Destructible (Ladrillos mágicos de roca volcánica)
+    function drawDestructibleBlock(x, y) {
+      // Base de ladrillo cálido
+      ctx.fillStyle = '#7c2d12';
+      ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+
+      // Brillo superior
+      ctx.fillStyle = '#9a3412';
+      ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, 4);
+
+      // Líneas de argamasa / grietas brillantes
+      ctx.fillStyle = '#ff7849';
+      ctx.fillRect(x + 4, y + Math.floor(CELL_SIZE / 2), CELL_SIZE - 8, 2);
+      ctx.fillRect(x + Math.floor(CELL_SIZE / 3), y + 4, 2, Math.floor(CELL_SIZE / 2) - 4);
+      ctx.fillRect(x + Math.floor(CELL_SIZE * 0.7), y + Math.floor(CELL_SIZE / 2), 2, Math.floor(CELL_SIZE / 2) - 4);
+
+      // Borde oscuro
+      ctx.strokeStyle = '#431407';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    }
+
+    // Dibujar Power-ups con Diseños Visualmente Distintos
+    function drawItem(c, r, type) {
+      const cx = (c + 0.5) * CELL_SIZE;
+      const cy = (r + 0.5) * CELL_SIZE;
+      const bob = Math.sin(animTime * 6) * 3;
+      const pulse = 1 + Math.sin(animTime * 8) * 0.12;
+
+      ctx.save();
+      ctx.translate(cx, cy + bob);
+
+      // Sombra en el piso
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, 14 - bob, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      let mainColor = '#ffd166';
+      let auraColor = 'rgba(255, 209, 102, 0.3)';
+      let icon = '⭐';
+      let label = 'ITEM';
+
+      if (type === ITEM_FIRE) {
+        mainColor = '#ff5722';
+        auraColor = 'rgba(255, 87, 34, 0.4)';
+        icon = '🔥';
+        label = '+FUEGO';
+      } else if (type === ITEM_SPEED) {
+        mainColor = '#ffd600';
+        auraColor = 'rgba(255, 214, 0, 0.4)';
+        icon = '⚡';
+        label = '+VEL';
+      } else if (type === ITEM_HEART) {
+        mainColor = '#ff1744';
+        auraColor = 'rgba(255, 23, 68, 0.4)';
+        icon = '❤️';
+        label = '+VIDA';
+      } else if (type === ITEM_BOMB) {
+        mainColor = '#b388ff';
+        auraColor = 'rgba(179, 136, 255, 0.4)';
+        icon = '💣';
+        label = '+BOMBA';
+      }
+
+      // 1. Resplandor exterior pulsante
+      const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, 16 * pulse);
+      aura.addColorStop(0, auraColor);
+      aura.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Pedestal esférico de cristal con borde de color
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 3. Icono central
+      ctx.font = '16px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icon, 0, 0);
+
+      // 4. Pequeña etiqueta de texto inferior
+      ctx.font = 'bold 8px monospace';
+      ctx.fillStyle = mainColor;
+      ctx.fillText(label, 0, 15);
+
+      ctx.restore();
+    }
+
+    // Dibujar Bomba con mecha encendida y chispas
+    function drawBomb(b) {
+      const cx = (b.cellX + 0.5) * CELL_SIZE;
+      const cy = (b.cellY + 0.5) * CELL_SIZE;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(b.scale, b.scale);
+
+      // Sombra en el suelo
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(0, 14, 12, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cuerpo esférico de la bomba
+      const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, 14);
+      grad.addColorStop(0, '#4a5568');
+      grad.addColorStop(0.4, '#1a202c');
+      grad.addColorStop(1, '#000000');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#2d3748';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Cuello metálico
+      ctx.fillStyle = '#a0aec0';
+      ctx.fillRect(-3, -16, 6, 4);
+
+      // Mecha curva
+      ctx.strokeStyle = '#d69e2e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -16);
+      ctx.quadraticCurveTo(6, -20, 4, -24);
+      ctx.stroke();
+
+      // Chispa brillante animada
+      const sparkSize = 3 + Math.sin(b.fuse) * 2;
+      ctx.fillStyle = '#ffeb3b';
+      ctx.shadowColor = '#ff5722';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(4, -24, sparkSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Dibujar Onda y Llamas de la Explosión
+    function drawFireCell(f) {
+      const cx = (f.cx + 0.5) * CELL_SIZE;
+      const cy = (f.cy + 0.5) * CELL_SIZE;
+      const progress = f.duration / f.maxDuration; // 1 -> 0
+      const size = (CELL_SIZE * 0.95) * (0.6 + progress * 0.4);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // Resplandor cálido exterior
+      const fireGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, size / 2);
+      fireGrad.addColorStop(0, '#ffffff');
+      fireGrad.addColorStop(0.2, '#fff176');
+      fireGrad.addColorStop(0.5, '#ff9800');
+      fireGrad.addColorStop(0.85, '#f44336');
+      fireGrad.addColorStop(1, 'rgba(183, 28, 28, 0)');
+
+      ctx.fillStyle = fireGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rayos de fuego en cruz
+      ctx.fillStyle = 'rgba(255, 235, 59, 0.7)';
+      ctx.fillRect(-size / 4, -3, size / 2, 6);
+      ctx.fillRect(-3, -size / 4, 6, size / 2);
+
+      ctx.restore();
+    }
+
+    // --- PERSONAJE PRINCIPAL: SLIME CON FORMA DE LLAMA DE FUEGO ---
+    function drawFlameSlimePlayer() {
+      // Si está invulnerable, parpadear
+      if (player.invulnerable > 0 && Math.floor(animTime * 14) % 2 === 0) {
+        return;
+      }
+
+      const px = player.x * CELL_SIZE;
+      const py = player.y * CELL_SIZE;
+      const s = player.squash;
+
+      ctx.save();
+      ctx.translate(px, py);
+
+      // Sombra en el suelo
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, 13, 11 * s, 5 / s, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Animación de la punta de fuego que se agita
+      const tipSway = Math.sin(animTime * 8) * 3 + (player.isMoving ? (player.facing === 'left' ? 4 : -4) : 0);
+
+      // Resplandor de fuego que ilumina los alrededores
+      const aura = ctx.createRadialGradient(0, 0, 4, 0, 0, 24);
+      aura.addColorStop(0, 'rgba(255, 170, 0, 0.4)');
+      aura.addColorStop(1, 'rgba(255, 60, 0, 0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cuerpo del Slime: Forma de gota / llama de fuego mediante Curvas Bézier
+      const flameGrad = ctx.createLinearGradient(0, 14, 0, -22);
+      flameGrad.addColorStop(0, '#e52d27');    // Base carmesí ardiente
+      flameGrad.addColorStop(0.35, '#ff5722'); // Naranja brillante
+      flameGrad.addColorStop(0.7, '#ffb300');  // Amarillo cálido
+      flameGrad.addColorStop(1, '#fffa65');    // Punta de llama incandescente
+
+      ctx.fillStyle = flameGrad;
+      ctx.beginPath();
+      // Base redondeada del slime
+      ctx.moveTo(-13 * (2 - s), 6);
+      // Lado izquierdo subiendo hacia la punta de llama
+      ctx.bezierCurveTo(-14 * (2 - s), -6, -8, -14, tipSway, -22 * s);
+      // Lado derecho bajando desde la punta
+      ctx.bezierCurveTo(8, -14, 14 * (2 - s), -6, 13 * (2 - s), 6);
+      // Fondo gelatinoso redondeado
+      ctx.bezierCurveTo(12 * (2 - s), 15 * s, -12 * (2 - s), 15 * s, -13 * (2 - s), 6);
+      ctx.closePath();
+      ctx.fill();
+
+      // Borde de fuego radiante
+      ctx.strokeStyle = '#ffd54f';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Núcleo interno de magma brillante
+      const coreGrad = ctx.createRadialGradient(0, 4, 1, 0, 4, 8);
+      coreGrad.addColorStop(0, '#fff9c4');
+      coreGrad.addColorStop(0.7, '#ffca28');
+      coreGrad.addColorStop(1, 'rgba(255, 87, 34, 0)');
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(0, 4, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ojos expresivos de Slime (miran hacia la dirección de movimiento)
+      let eyeOffX = 0;
+      let eyeOffY = 0;
+      if (player.facing === 'left') eyeOffX = -3;
+      if (player.facing === 'right') eyeOffX = 3;
+      if (player.facing === 'up') eyeOffY = -2;
+      if (player.facing === 'down') eyeOffY = 1;
+
+      // Ojo izquierdo
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(-5 + eyeOffX, 2 + eyeOffY, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#212121';
+      ctx.beginPath();
+      ctx.arc(-5 + eyeOffX * 1.3, 2 + eyeOffY, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      // Brillo blanco en pupila
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-6 + eyeOffX, 1 + eyeOffY, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ojo derecho
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(5 + eyeOffX, 2 + eyeOffY, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#212121';
+      ctx.beginPath();
+      ctx.arc(5 + eyeOffX * 1.3, 2 + eyeOffY, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      // Brillo en pupila
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(4 + eyeOffX, 1 + eyeOffY, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sonrisa amigable
+      ctx.strokeStyle = '#5d1000';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(eyeOffX, 6 + eyeOffY, 2.5, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // --- ENEMIGOS: SLIMES AZULES GELATINOSOS ---
+    function drawBlueSlime(en) {
+      const ex = en.x * CELL_SIZE;
+      const ey = en.y * CELL_SIZE;
+      const s = en.squash;
+
+      ctx.save();
+      ctx.translate(ex, ey);
+
+      // Sombra
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(0, 11, 11 * s, 4 / s, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cuerpo de Slime Azul Gelatinoso
+      const slimeGrad = ctx.createRadialGradient(-3, -3, 3, 0, 2, 16);
+      slimeGrad.addColorStop(0, '#90e0ef');  // Azul hielo translúcido
+      slimeGrad.addColorStop(0.5, '#00b4d8'); // Cian vibrante
+      slimeGrad.addColorStop(1, '#0077b6');   // Azul profundo de gelatina
+
+      ctx.fillStyle = slimeGrad;
+      ctx.beginPath();
+      // Domo de gelatina con pequeña gota en la coronilla
+      ctx.moveTo(-13 * s, 8);
+      ctx.bezierCurveTo(-14 * s, -4, -8, -14 * s, 0, -15 * s);
+      ctx.bezierCurveTo(8, -14 * s, 14 * s, -4, 13 * s, 8);
+      ctx.bezierCurveTo(10 * s, 14, -10 * s, 14, -13 * s, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Borde brillante y reflejos de gelatina
+      ctx.strokeStyle = '#caf0f8';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Destello de luz tipo gelatina (brillo en la parte superior izquierda)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.beginPath();
+      ctx.ellipse(-5, -7 * s, 4, 2, -Math.PI / 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ojos de Slime Azul (un poco enojados / determinados)
+      const lookX = en.dirX * 2.5;
+      const lookY = en.dirY * 2.5;
+
+      // Ojo izquierdo
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-5 + lookX, 2 + lookY, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#03045e';
+      ctx.beginPath();
+      ctx.arc(-5 + lookX * 1.2, 2 + lookY * 1.2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ojo derecho
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(5 + lookX, 2 + lookY, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#03045e';
+      ctx.beginPath();
+      ctx.arc(5 + lookX * 1.2, 2 + lookY * 1.2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // --- BUCLE PRINCIPAL DEL JUEGO (GAME LOOP) ---
+    function gameLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const rawDt = (timestamp - lastTimestamp) / 1000;
+      const dt = Math.min(rawDt, 0.05); // Límite de 50ms para evitar saltos
+      lastTimestamp = timestamp;
+
+      update(dt);
+      render();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Iniciar controladores y bucle al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      setupInput();
+      initLevel();
+      requestAnimationFrame(gameLoop);
+    });
+  </script>
+</body>
+</html>
